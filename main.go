@@ -15,7 +15,10 @@ import (
 )
 
 const (
-	path = "/webhooks"
+	path        = "/webhooks"
+	repoOwner   = "jadlers"
+	repoName    = "webhook-testing-TMP"
+	projectName = "Suggestions overview"
 )
 
 func main() {
@@ -30,12 +33,15 @@ func main() {
 		log.Panicln(err)
 		os.Exit(1)
 	}
-	logDebugln("Rate limits:", rl)
+	logDebugf("Rate limits: %d/%d remaining", rl.Core.Remaining, rl.Core.Limit)
 
 	hook, err := webhook.New(webhook.Options.Secret(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
 		log.Fatalf("Error setting up webhook: %+v\n", err)
 	}
+
+	project := getProject(ghClient)
+	getProjectColumns(ghClient, project)
 
 	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		payload, err := hook.Parse(r, webhook.IssuesEvent, webhook.LabelEvent, webhook.ProjectCardEvent)
@@ -94,6 +100,44 @@ func createGithubClient() *github.Client {
 	}
 
 	return github.NewClient(&http.Client{Transport: itr})
+}
+
+func getProject(gh *github.Client) *github.Project {
+	projects, _, err := gh.Repositories.ListProjects(context.Background(), repoOwner, repoName, &github.ProjectListOptions{State: "open"})
+	if err != nil {
+		log.Fatalln("Could not get repo", err)
+	}
+
+	logDebugln("Listing projects in the repo:")
+	var project *github.Project
+	for i, p := range projects {
+		logDebugf("\t#%d: %s (id: %d)\n", i, *p.Name, p.ID)
+		if *p.Name == projectName {
+			project = p
+			break
+		}
+	}
+
+	if project == nil {
+		logInfof("Could not find project named %s\n", projectName)
+	} else {
+		logDebugln("Found project we're looking for:", project)
+	}
+
+	return project
+}
+
+func getProjectColumns(gh *github.Client, project *github.Project) []*github.ProjectColumn {
+	projectColumns, _, err := gh.Projects.ListProjectColumns(context.Background(), *project.ID, &github.ListOptions{})
+	if err != nil {
+		log.Fatal("Could not get project columns:", err)
+	}
+	logDebugf("Listing columns in '%s'\n", *project.Name)
+	for i, column := range projectColumns {
+		logDebugf("\t#%d: %s (id: %d)\n", i, *column.Name, column.ID)
+	}
+
+	return projectColumns
 }
 
 func handleIssuesEvent(issue webhook.IssuesPayload) {
