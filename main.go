@@ -103,12 +103,12 @@ func handleIssuesEvent(issue webhook.IssuesPayload) {
 	}
 
 	logDebugln("New IssueEvent:")
-	logDebugf("  Action: %+v\n", issue.Action)
-	logDebugf("  Label: %+v\n", issue.Label.Name)
+	logDebugf("\tAction: %+v\n", issue.Action)
+	logDebugf("\tLabel: %+v\n", issue.Label.Name)
 }
 
 func handleProjectCardEvent(projectCard webhook.ProjectCardPayload) {
 	logDebugln("New ProjectCardEvent:")
-	logDebugf("  %+v\n", projectCard.Action)
-	logDebugf("  %+v\n", projectCard.ProjectCard)
+	logDebugf("\t%+v\n", projectCard.Action)
+	logDebugf("\t%+v\n", projectCard.ProjectCard)
 }
