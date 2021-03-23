@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -41,7 +42,18 @@ func main() {
 	}
 
 	project := getProject(ghClient)
-	getProjectColumns(ghClient, project)
+	// columns := getProjectColumns(ghClient, project)
+	// for _, column := range columns {
+	// 	getProjectCards(ghClient, column)
+	// }
+
+	logDebugln("Looking for card for issue 1")
+	foundCard, err := FindIssueProjectCard(ghClient, project, 1)
+	if err != nil {
+		log.Fatalln(err)
+	} else {
+		logDebugf("\tFound card %+v\n", foundCard)
+	}
 
 	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		payload, err := hook.Parse(r, webhook.IssuesEvent, webhook.LabelEvent, webhook.ProjectCardEvent)
@@ -138,6 +150,35 @@ func getProjectColumns(gh *github.Client, project *github.Project) []*github.Pro
 	}
 
 	return projectColumns
+}
+
+func getProjectCards(gh *github.Client, column *github.ProjectColumn) []*github.ProjectCard {
+	cards, _, err := gh.Projects.ListProjectCards(context.Background(), *column.ID, &github.ProjectCardListOptions{})
+	if err != nil {
+		log.Fatalf("Could not fetch cards for column '%s':\n%+v\n", *column.Name, err)
+	}
+
+	logDebugf("Listing cards in '%s'\n", *column.Name)
+	for i, card := range cards {
+		logDebugf("\t#%d: ContentURL %+v\n", i, *card.ContentURL)
+	}
+	return cards
+}
+
+func FindIssueProjectCard(gh *github.Client, project *github.Project, issueNum int) (projectCard *github.ProjectCard, err error) {
+	issueURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d", repoOwner, repoName, issueNum)
+	logDebugf("Looking for card with URL: %s\n", issueURL)
+	columns := getProjectColumns(gh, project)
+	for _, column := range columns {
+		cards := getProjectCards(gh, column)
+		for _, card := range cards {
+			if issueURL == *card.ContentURL {
+				return card, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("No project card found for issue %d", issueNum)
 }
 
 func handleIssuesEvent(issue webhook.IssuesPayload) {
