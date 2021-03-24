@@ -2,11 +2,11 @@ package configuration
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
 	"github.com/joho/godotenv"
+	logrus "github.com/sirupsen/logrus"
 )
 
 type Environment string
@@ -19,8 +19,10 @@ const (
 
 type Conf struct {
 	Environment Environment
-	Owner       string
-	Repository  string
+	log         *logrus.Logger
+
+	Owner      string
+	Repository string
 
 	GitHubAppID          int64
 	GitHubAppPrivateKey  string
@@ -39,10 +41,11 @@ type syncState struct {
 
 // Init will collect configuration into a Configuration
 func Init() *Conf {
+	log := logrus.New()
 	if err := godotenv.Load(); err != nil {
-		log.Println("Error loading '.env' file")
+		log.Warn("Error loading '.env' file")
 	} else {
-		log.Println("Reading environment from '.env' file")
+		log.Info("Reading environment from '.env' file")
 	}
 
 	stateNames := [5]string{"Pending", "In Consideration", "Accepted", "Rejected", "Added"}
@@ -72,9 +75,11 @@ func Init() *Conf {
 	case "production":
 		conf.Environment = Production
 	default:
-		log.Printf("Using Environment='%s' since none set\n", Development)
+		log.Warnf("Using Environment='%s' since none set\n", Development)
 		conf.Environment = Development
 	}
+
+	conf.log = log
 
 	appID, err := getNumericEnv("GITHUB_APP_ID", true)
 	if err != nil {

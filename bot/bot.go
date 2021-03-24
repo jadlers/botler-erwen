@@ -9,6 +9,7 @@ import (
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/v33/github"
 	"github.com/jadlers/botler-erwen/configuration"
+	"github.com/sirupsen/logrus"
 	webhook "gopkg.in/go-playground/webhooks.v5/github"
 )
 
@@ -16,6 +17,7 @@ type Bot struct {
 	gh   *github.Client
 	hook *webhook.Webhook
 	conf *configuration.Conf
+	log  *logrus.Logger
 }
 
 func New(conf *configuration.Conf) *Bot {
