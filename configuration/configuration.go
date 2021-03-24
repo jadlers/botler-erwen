@@ -9,9 +9,18 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type Environment string
+
+const (
+	Development = "DEVELOPMENT"
+	Testing     = "TESTING"
+	Production  = "PRODUCTION"
+)
+
 type Conf struct {
-	Owner      string
-	Repository string
+	Environment Environment
+	Owner       string
+	Repository  string
 
 	GitHubAppID          int64
 	GitHubAppPrivateKey  string
@@ -53,6 +62,18 @@ func Init() *Conf {
 		GitHubAppPrivateKey: os.Getenv("GITHUB_PRIVATE_KEY"),
 		GitHubWebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
 		syncStates:          syncStates,
+	}
+
+	switch os.Getenv("ENV") {
+	case "development":
+		conf.Environment = Development
+	case "testing":
+		conf.Environment = Testing
+	case "production":
+		conf.Environment = Production
+	default:
+		log.Printf("Using Environment='%s' since none set\n", Development)
+		conf.Environment = Development
 	}
 
 	appID, err := getNumericEnv("GITHUB_APP_ID", true)
