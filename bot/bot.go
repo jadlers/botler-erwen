@@ -39,3 +39,11 @@ func (b *Bot) ConnectionStatus() (bool, error) {
 	fmt.Printf("[INFO] Got zen for testing connectivity: '%s'\n", zen)
 	return true, nil
 }
+
+func (b *Bot) RateLimitStatus() *github.Rate {
+	rl, _, err := b.gh.RateLimits(context.Background())
+	if err != nil {
+		fmt.Println(err)
+	}
+	return rl.Core
+}
