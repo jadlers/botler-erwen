@@ -11,7 +11,7 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/v33/github"
-	"github.com/joho/godotenv"
+	"github.com/jadlers/botler-erwen/configuration"
 	webhook "gopkg.in/go-playground/webhooks.v5/github"
 )
 
@@ -23,11 +23,10 @@ const (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	conf := configuration.Init()
 
-	ghClient := createGithubClient()
+	bot.New(conf)
+	os.Exit(0)
 
 	rl, _, err := ghClient.RateLimits(context.Background())
 	if err != nil {
