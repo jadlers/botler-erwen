@@ -52,6 +52,19 @@ func (b *Bot) getProjectColumns(project *github.Project) ([]*github.ProjectColum
 	return projectColumns, nil
 }
 
+func (b *Bot) getProjectColumn(project *github.Project, column string) (*github.ProjectColumn, error) {
+	allColumns, _, err := b.gh.Projects.ListProjectColumns(context.Background(), project.GetID(), &github.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, col := range allColumns {
+		if *col.Name == column {
+			return col, nil
+		}
+	}
+	return nil, fmt.Errorf("Could not find column named '%s' in project '%s'\n", column, *project.Name)
+}
+
 func (b *Bot) getProjectCards(column *github.ProjectColumn) ([]*github.ProjectCard, error) {
 	cards, _, err := b.gh.Projects.ListProjectCards(context.Background(),
 		*column.ID,
