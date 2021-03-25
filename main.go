@@ -23,6 +23,8 @@ func main() {
 		}
 	}
 
+	erwen.SetupSyncStates()
+
 	hook, err := webhook.New(webhook.Options.Secret(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
 		log.Errorf("Could not set up webhook: %v\n", err)

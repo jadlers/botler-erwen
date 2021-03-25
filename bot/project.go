@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-github/v33/github"
+	"github.com/sirupsen/logrus"
 )
 
 func (b *Bot) getProject(name string) (*github.Project, error) {
@@ -31,7 +32,7 @@ func (b *Bot) getProject(name string) (*github.Project, error) {
 		return nil, fmt.Errorf("Could not find project named %s\n", name)
 	}
 
-	b.log.Debugf("Found project we're looking for: %+v\n", project)
+	b.log.WithFields(logrus.Fields{"name": name, "ID": *project.ID}).Debugf("Found project we're looking for.\n")
 	return project, nil
 }
 

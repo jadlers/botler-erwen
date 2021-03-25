@@ -19,11 +19,11 @@ type Bot struct {
 	conf *configuration.Conf
 	log  *logrus.Logger
 
-	syncStates []*SyncState
+	SyncStates []*SyncState
 }
 
 func New(conf *configuration.Conf) *Bot {
-	bot := &Bot{log: logrus.New()}
+	bot := &Bot{log: conf.Log, conf: conf}
 	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, conf.GitHubAppID, conf.GitHubInstallationID, conf.GitHubAppPrivateKey)
 	if err != nil {
 		fmt.Printf("Could not initialise transport layer: %v\n", err)
@@ -35,24 +35,52 @@ func New(conf *configuration.Conf) *Bot {
 	return bot
 }
 
-func (b *Bot) AddSyncState(name, projectName, column string, labels []string) {
+// AddSyncState finds the project column and labels used to define a SyncState
+// and adds it to the stored slice of SyncStates. If any part is missing
+// nothing is added to the SyncState slice and an error is returned.
+func (b *Bot) AddSyncState(name, projectName, columnName string, labels []string) error {
 	ss := &SyncState{Name: name}
 
-	// TODO: Fill out SyncState
+	// Find project
+	project, err := b.getProject(projectName)
+	if err != nil {
+		b.log.Warnf("Could not find project named '%s', are you sure it exists?\n", projectName)
+		return err
+	}
 
-	b.syncStates = append(b.syncStates, ss)
+	// Find column
+	column, err := b.getProjectColumn(project, columnName)
+	if err != nil {
+		b.log.Warn(err)
+		return err
+	}
+	ss.ProjectColumn = column
+
+	// Find labels
+	for _, labelName := range labels {
+		label, err := b.getLabel(labelName)
+		if err != nil {
+			b.log.Warnf("Could not find the label '%s', does it exist in the repository?\n", labelName)
+			return err
+		}
+		ss.Labels = append(ss.Labels, label)
+	}
+
+	// Store the filled out SyncState
+	b.SyncStates = append(b.SyncStates, ss)
+	return nil
 }
 
 // setupSyncStates is a temporary solution for setting up states which are
 // represented by GitHub Projects and labels on issues.
 //
 // TODO: This should be read from some kind of file. Maybe using viper?
-func setupSyncStates(bot *Bot) {
+func (b *Bot) SetupSyncStates() {
 	requiredLabels := []string{"Suggestion"} // Required for all issues in this state group
 	stateNames := [5]string{"Pending", "In Consideration", "Accepted", "Rejected", "Added"}
 	for _, stateName := range stateNames {
 		labels := append(requiredLabels, stateName)
-		bot.AddSyncState(stateName, "Suggestions overview", stateName, labels)
+		b.AddSyncState(stateName, "Suggestions overview", stateName, labels)
 	}
 }
 
