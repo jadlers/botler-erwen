@@ -43,6 +43,19 @@ func (b *Bot) AddSyncState(name, projectName, column string, labels []string) {
 	b.syncStates = append(b.syncStates, ss)
 }
 
+// setupSyncStates is a temporary solution for setting up states which are
+// represented by GitHub Projects and labels on issues.
+//
+// TODO: This should be read from some kind of file. Maybe using viper?
+func setupSyncStates(bot *Bot) {
+	requiredLabels := []string{"Suggestion"} // Required for all issues in this state group
+	stateNames := [5]string{"Pending", "In Consideration", "Accepted", "Rejected", "Added"}
+	for _, stateName := range stateNames {
+		labels := append(requiredLabels, stateName)
+		bot.AddSyncState(stateName, "Suggestions overview", stateName, labels)
+	}
+}
+
 func (b *Bot) ConnectionStatus() (bool, error) {
 	zen, _, err := b.gh.Zen(context.Background())
 	if err != nil {
