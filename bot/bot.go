@@ -18,6 +18,8 @@ type Bot struct {
 	hook *webhook.Webhook
 	conf *configuration.Conf
 	log  *logrus.Logger
+
+	syncStates []*SyncState
 }
 
 func New(conf *configuration.Conf) *Bot {
@@ -31,6 +33,14 @@ func New(conf *configuration.Conf) *Bot {
 	bot.gh = github.NewClient(&http.Client{Transport: itr})
 
 	return bot
+}
+
+func (b *Bot) AddSyncState(name, projectName, column string, labels []string) {
+	ss := &SyncState{Name: name}
+
+	// TODO: Fill out SyncState
+
+	b.syncStates = append(b.syncStates, ss)
 }
 
 func (b *Bot) ConnectionStatus() (bool, error) {
