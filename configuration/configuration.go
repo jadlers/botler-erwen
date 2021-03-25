@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/joho/godotenv"
-	logrus "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type Environment string
@@ -19,7 +19,7 @@ const (
 
 type Conf struct {
 	Environment Environment
-	log         *logrus.Logger
+	Log         *logrus.Logger
 
 	Owner      string
 	Repository string
@@ -68,18 +68,21 @@ func Init() *Conf {
 	}
 
 	switch os.Getenv("ENV") {
-	case "development":
-		conf.Environment = Development
 	case "testing":
 		conf.Environment = Testing
+		log.SetLevel(logrus.WarnLevel)
 	case "production":
 		conf.Environment = Production
+		log.SetLevel(logrus.WarnLevel)
 	default:
-		log.Warnf("Using Environment='%s' since none set\n", Development)
+		log.Infof("Using Environment='%s' since none set\n", Development)
+		fallthrough
+	case "development":
 		conf.Environment = Development
+		log.SetLevel(logrus.DebugLevel)
 	}
 
-	conf.log = log
+	conf.Log = log
 
 	appID, err := getNumericEnv("GITHUB_APP_ID", true)
 	if err != nil {

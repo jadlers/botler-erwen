@@ -21,7 +21,7 @@ type Bot struct {
 }
 
 func New(conf *configuration.Conf) *Bot {
-	bot := &Bot{}
+	bot := &Bot{log: logrus.New()}
 	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, conf.GitHubAppID, conf.GitHubInstallationID, conf.GitHubAppPrivateKey)
 	if err != nil {
 		fmt.Printf("Could not initialise transport layer: %v\n", err)
@@ -38,7 +38,7 @@ func (b *Bot) ConnectionStatus() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("Can not connect to GitHub. %s\n", err)
 	}
-	fmt.Printf("[INFO] Got zen for testing connectivity: '%s'\n", zen)
+	b.log.Debugf("Got zen for testing connectivity: '%s'\n", zen)
 	return true, nil
 }
 
