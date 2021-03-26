@@ -2,12 +2,11 @@ package main
 
 import (
 	"net/http"
-	"os"
 
+	"github.com/google/go-github/v33/github"
 	"github.com/jadlers/botler-erwen/bot"
 	"github.com/jadlers/botler-erwen/configuration"
 	"github.com/sirupsen/logrus"
-	webhook "gopkg.in/go-playground/webhooks.v5/github"
 )
 
 func main() {
@@ -26,29 +25,28 @@ func main() {
 
 	erwen.SetupSyncStates()
 
-	hook, err := webhook.New(webhook.Options.Secret(os.Getenv("GITHUB_WEBHOOK_SECRET")))
-	if err != nil {
-		log.Errorf("Could not set up webhook: %v\n", err)
-	}
-
 	http.HandleFunc("/webhooks", func(w http.ResponseWriter, r *http.Request) {
-		payload, err := hook.Parse(r, webhook.IssuesEvent, webhook.LabelEvent, webhook.ProjectCardEvent)
+		payload, err := github.ValidatePayload(r, []byte(conf.GitHubWebhookSecret))
 		if err != nil {
-			if err == webhook.ErrEventNotFound {
-				// ok event wasn't one of the ones asked to be parsed
-			}
+			log.Infoln("Ignoring unvalidated request")
+			return
 		}
 
-		switch payload.(type) {
-		case webhook.IssuesPayload:
-			issue := payload.(webhook.IssuesPayload)
+		event, err := github.ParseWebHook(github.WebHookType(r), payload)
+		if err != nil {
+			log.Errorln(err)
+		}
+
+		switch event := event.(type) {
+		case *github.IssuesEvent:
 			var labels []string
-			for _, label := range issue.Issue.Labels {
-				labels = append(labels, label.Name)
+			for _, label := range event.Issue.Labels {
+				labels = append(labels, label.GetName())
 			}
-			issueID := erwen.IssueIDFromURL(issue.Issue.URL)
+
+			issueID := erwen.IssueIDFromURL(event.Issue.GetURL())
 			eventLog := log.WithFields(logrus.Fields{
-				"action":  issue.Action,
+				"action":  event.GetAction(),
 				"issueID": issueID,
 				"labels":  labels,
 			})
@@ -65,10 +63,10 @@ func main() {
 
 			// See that there's only one match
 			if len(matchedStates) == 0 {
-				eventLog.Debugln("No SyncState matches labels on issue")
+				eventLog.Infoln("No SyncState matches labels on issue")
 				return
 			} else if len(matchedStates) > 1 {
-				eventLog.Warnln("The issue matches multiple SyncStates")
+				eventLog.Warnln("Issue matches multiple SyncStates")
 				return
 			}
 
@@ -76,8 +74,8 @@ func main() {
 			eventLog.Debugf("Found single matching state: %s\n", matchedState.Name)
 
 			// Check if it's in the correct project column
-			if erwen.IsInCorrectColumn(matchedState, issue.Issue.URL) {
-				eventLog.Debugln("Issue is in the synced state")
+			if erwen.IsInCorrectColumn(matchedState, event.Issue.GetURL()) {
+				eventLog.Debugln("Issue is already in correct synced state")
 				return
 			}
 
@@ -98,13 +96,14 @@ func main() {
 				}
 			}
 
-		case webhook.ProjectCardPayload:
-			projectCard := payload.(webhook.ProjectCardPayload)
-			log.WithField("action", projectCard.Action).Infoln("New ProjectCardEvent")
+		case *github.ProjectCardEvent:
+			projectCard := event
+			eventLog := log.WithField("action", projectCard.GetAction())
+			eventLog.Infoln("New ProjectCardEvent")
+			eventLog.Errorln("NOT IMPLEMENTED")
 
-		case webhook.LabelPayload:
-			label := payload.(webhook.LabelPayload)
-			log.WithField("action", label.Action).Infoln("New LabelEvent")
+		default:
+			log.WithField("eventType", github.WebHookType(r)).Debugln("New unhandled event")
 		}
 	})
 
