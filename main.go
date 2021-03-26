@@ -85,11 +85,10 @@ func main() {
 			// If not: Find it and move it or create it.
 			issueID := erwen.IssueIDFromURL(issue.Issue.URL)
 			if card, err := erwen.FindIssueProjectCard(issueID); err == nil {
-				// Move the card
-				log.WithField("cardID", card.GetID()).Fatal("Will move card, not implemented")
+				erwen.MoveCard(matchedState, card.GetID())
 			} else {
 				// Create the card
-				log.WithField("issueID", issueID).Infoln("Could not find a card, creating one.")
+				log.WithField("issueID", issueID).Fatalln("Could not find a card, creating one.")
 			}
 
 		case webhook.ProjectCardPayload:

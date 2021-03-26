@@ -1,6 +1,8 @@
 package bot
 
 import (
+	"context"
+
 	"github.com/google/go-github/v33/github"
 )
 
@@ -46,7 +48,11 @@ func (b *Bot) IsInCorrectColumn(ss *SyncState, issueURL string) bool {
 	return false
 }
 
-func (b *Bot) MoveCard(ss *SyncState, cardID int64) error {
-	b.log.Fatal("UNIMPLEMENTED")
-	return nil
+// MoveCard moves the card with given ID to the column of the targetState
+func (b *Bot) MoveCard(targetState *SyncState, cardID int64) error {
+	_, err := b.gh.Projects.MoveProjectCard(
+		context.Background(),
+		cardID,
+		&github.ProjectCardMoveOptions{Position: "bottom", ColumnID: targetState.ProjectColumn.GetID()})
+	return err
 }
