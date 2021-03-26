@@ -79,6 +79,7 @@ func (b *Bot) AddSyncState(name, projectName, columnName string, labels []string
 
 	// Store the filled out SyncState
 	b.SyncStates = append(b.SyncStates, ss)
+	b.log.WithField("Name", name).Infoln("Added new SyncState")
 	return nil
 }
 
@@ -88,8 +89,7 @@ func (b *Bot) AddSyncState(name, projectName, columnName string, labels []string
 // TODO: This should be read from some kind of file. Maybe using viper?
 func (b *Bot) SetupSyncStates() {
 	requiredLabels := []string{"Suggestion"} // Required for all issues in this state group
-	// stateNames := [5]string{"Pending", "In Consideration", "Accepted", "Rejected", "Added"}
-	stateNames := [2]string{"Pending", "In Consideration"}
+	stateNames := [5]string{"Pending", "In Consideration", "Accepted", "Rejected", "Added"}
 	for _, stateName := range stateNames {
 		labels := append(requiredLabels, stateName)
 		b.AddSyncState(stateName, "Suggestions overview", stateName, labels)
