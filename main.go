@@ -39,6 +39,11 @@ func main() {
 
 		switch event := event.(type) {
 		case *github.IssuesEvent:
+			if selfTriggered(event.Sender) {
+				log.Debugln("Ignoring 'IssuesEvent' since triggered by this bot")
+				return
+			}
+
 			var labels []string
 			for _, label := range event.Issue.Labels {
 				labels = append(labels, label.GetName())
@@ -97,6 +102,11 @@ func main() {
 			}
 
 		case *github.ProjectCardEvent:
+			if selfTriggered(event.Sender) {
+				log.Debugln("Ignoring 'ProjectCardEvent' since triggered by this bot")
+				return
+			}
+
 			projectCard := event
 			eventLog := log.WithField("action", projectCard.GetAction())
 			eventLog.Infoln("New ProjectCardEvent")
@@ -108,4 +118,12 @@ func main() {
 	})
 
 	http.ListenAndServe(":3000", nil)
+}
+
+// selfTriggered returns true if the passed user is this bot
+func selfTriggered(user *github.User) bool {
+	if user.GetType() == "Bot" && user.GetLogin() == "botler-erwen[bot]" {
+		return true
+	}
+	return false
 }
