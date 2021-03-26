@@ -68,6 +68,9 @@ func (b *Bot) CreateCard(targetState *SyncState, issue *github.Issue) (*github.P
 		return nil, err
 	}
 
+	// Move the newly created card to the bottom in order to preserve oldest on top
+	b.MoveCard(targetState, card.GetID())
+
 	b.cachedCards[card.GetID()] = card
 	return card, nil
 }
