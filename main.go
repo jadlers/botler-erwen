@@ -46,11 +46,13 @@ func main() {
 			for _, label := range issue.Issue.Labels {
 				labels = append(labels, label.Name)
 			}
-			log.WithFields(logrus.Fields{
+			issueID := erwen.IssueIDFromURL(issue.Issue.URL)
+			eventLog := log.WithFields(logrus.Fields{
 				"action":  issue.Action,
-				"issueID": issue.Issue.ID,
+				"issueID": issueID,
 				"labels":  labels,
-			}).Infoln("Got new IssuesEvent")
+			})
+			eventLog.Infoln("New issue event")
 
 			// Check if the labels on the issue match labels of any SyncState
 			var matchedStates []*bot.SyncState
@@ -63,29 +65,29 @@ func main() {
 
 			// See that there's only one match
 			if len(matchedStates) == 0 {
-				log.Debugln("No SyncState matches labels on issue")
+				eventLog.Debugln("No SyncState matches labels on issue")
 				return
 			} else if len(matchedStates) > 1 {
-				log.WithFields(logrus.Fields{
-					"issueID": issue.Issue.ID,
-					"title":   issue.Issue.Title,
-				}).Warnln("The issue matches multiple SyncStates")
+				eventLog.Warnln("The issue matches multiple SyncStates")
 				return
 			}
 
 			matchedState := matchedStates[0]
-			log.WithField("state", matchedState.Name).Debugln("Found single matching state")
+			eventLog.Debugf("Found single matching state: %s\n", matchedState.Name)
 
 			// Check if it's in the correct project column
 			if erwen.IsInCorrectColumn(matchedState, issue.Issue.URL) {
-				log.WithField("currentState", matchedState.Name).Debugln("Issue is in the synced state")
+				eventLog.Debugln("Issue is in the synced state")
 				return
 			}
 
 			// If not: Find it and move it or create it.
-			issueID := erwen.IssueIDFromURL(issue.Issue.URL)
 			if card, err := erwen.FindIssueProjectCard(issueID); err == nil {
-				erwen.MoveCard(matchedState, card.GetID())
+				if err := erwen.MoveCard(matchedState, card.GetID()); err != nil {
+					eventLog.Errorf("Error moving card", err)
+				} else {
+					eventLog.Infof("Moved card to column: %s\n", matchedState.ProjectColumn.GetName())
+				}
 			} else {
 				// Create the card
 				log.WithField("issueID", issueID).Fatalln("Could not find a card, creating one.")
