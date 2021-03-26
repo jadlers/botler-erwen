@@ -56,3 +56,18 @@ func (b *Bot) MoveCard(targetState *SyncState, cardID int64) error {
 		&github.ProjectCardMoveOptions{Position: "bottom", ColumnID: targetState.ProjectColumn.GetID()})
 	return err
 }
+
+// CreateCard creates a new project card in the column of the targetState where
+// the content of the card links to the issue
+func (b *Bot) CreateCard(targetState *SyncState, issue *github.Issue) (*github.ProjectCard, error) {
+	card, _, err := b.gh.Projects.CreateProjectCard(context.Background(),
+		targetState.ProjectColumn.GetID(),
+		&github.ProjectCardOptions{ContentID: issue.GetID(), ContentType: "Issue"})
+
+	if err != nil {
+		return nil, err
+	}
+
+	b.cachedCards[card.GetID()] = card
+	return card, nil
+}

@@ -90,7 +90,12 @@ func main() {
 				}
 			} else {
 				// Create the card
-				log.WithField("issueID", issueID).Fatalln("Could not find a card, creating one.")
+				ghIssue, _ := erwen.GetIssue(issueID)
+				if _, err := erwen.CreateCard(matchedState, ghIssue); err != nil {
+					eventLog.Warnf("Error creating card", err)
+				} else {
+					eventLog.Infoln("Created card.")
+				}
 			}
 
 		case webhook.ProjectCardPayload:
