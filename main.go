@@ -6,6 +6,7 @@ import (
 
 	"github.com/jadlers/botler-erwen/bot"
 	"github.com/jadlers/botler-erwen/configuration"
+	"github.com/sirupsen/logrus"
 	webhook "gopkg.in/go-playground/webhooks.v5/github"
 )
 
@@ -41,15 +42,65 @@ func main() {
 		switch payload.(type) {
 		case webhook.IssuesPayload:
 			issue := payload.(webhook.IssuesPayload)
-			log.WithField("action", issue.Action).Infoln("Got new IssuesEvent")
+			var labels []string
+			for _, label := range issue.Issue.Labels {
+				labels = append(labels, label.Name)
+			}
+			log.WithFields(logrus.Fields{
+				"action":  issue.Action,
+				"issueID": issue.Issue.ID,
+				"labels":  labels,
+			}).Infoln("Got new IssuesEvent")
+
+			// Check if the labels on the issue match labels of any SyncState
+			var matchedStates []*bot.SyncState
+			for _, syncState := range erwen.SyncStates {
+				if syncState.InState(labels) {
+					matchedStates = append(matchedStates, syncState)
+					break
+				}
+			}
+
+			// See that there's only one match
+			if len(matchedStates) == 0 {
+				log.Debugln("No SyncState matches labels on issue")
+				return
+			} else if len(matchedStates) > 1 {
+				log.WithFields(logrus.Fields{
+					"issueID": issue.Issue.ID,
+					"title":   issue.Issue.Title,
+				}).Warnln("The issue matches multiple SyncStates")
+				return
+			}
+
+			matchedState := matchedStates[0]
+			log.WithField("state", matchedState.Name).Debugln("Found single matching state")
+
+			// Check if it's in the correct project column
+			if erwen.IsInCorrectColumn(matchedState, issue.Issue.URL) {
+				log.WithField("currentState", matchedState.Name).Debugln("Issue is in the synced state")
+				return
+			}
+
+			// If not: Find it and move it or create it.
+			issueID := erwen.IssueIDFromURL(issue.Issue.URL)
+			if card, err := erwen.FindIssueProjectCard(issueID); err == nil {
+				// Move the card
+				log.WithField("cardID", card.GetID()).Fatal("Will move card, not implemented")
+			} else {
+				// Create the card
+				log.WithField("issueID", issueID).Infoln("Could not find a card, creating one.")
+			}
 
 		case webhook.ProjectCardPayload:
 			projectCard := payload.(webhook.ProjectCardPayload)
-			log.WithField("action", projectCard.Action).Infoln("Got new ProjectCardEvent")
+			log.WithField("action", projectCard.Action).Infoln("New ProjectCardEvent")
+
+		case webhook.LabelPayload:
+			label := payload.(webhook.LabelPayload)
+			log.WithField("action", label.Action).Infoln("New LabelEvent")
 		}
 	})
 
-	if conf.Environment == configuration.Production {
-		http.ListenAndServe(":3000", nil)
-	}
+	http.ListenAndServe(":3000", nil)
 }

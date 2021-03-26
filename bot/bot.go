@@ -20,10 +20,21 @@ type Bot struct {
 	log  *logrus.Logger
 
 	SyncStates []*SyncState
+
+	// To reduce the number of requests sent
+	cachedProjects map[string]*github.Project
+	cachedColumns  map[string]*github.ProjectColumn
+	cachedCards    map[int64]*github.ProjectCard
 }
 
 func New(conf *configuration.Conf) *Bot {
-	bot := &Bot{log: conf.Log, conf: conf}
+	bot := &Bot{
+		log:            conf.Log,
+		conf:           conf,
+		cachedProjects: map[string]*github.Project{},
+		cachedColumns:  map[string]*github.ProjectColumn{},
+		cachedCards:    map[int64]*github.ProjectCard{},
+	}
 	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, conf.GitHubAppID, conf.GitHubInstallationID, conf.GitHubAppPrivateKey)
 	if err != nil {
 		fmt.Printf("Could not initialise transport layer: %v\n", err)
@@ -77,7 +88,8 @@ func (b *Bot) AddSyncState(name, projectName, columnName string, labels []string
 // TODO: This should be read from some kind of file. Maybe using viper?
 func (b *Bot) SetupSyncStates() {
 	requiredLabels := []string{"Suggestion"} // Required for all issues in this state group
-	stateNames := [5]string{"Pending", "In Consideration", "Accepted", "Rejected", "Added"}
+	// stateNames := [5]string{"Pending", "In Consideration", "Accepted", "Rejected", "Added"}
+	stateNames := [2]string{"Pending", "In Consideration"}
 	for _, stateName := range stateNames {
 		labels := append(requiredLabels, stateName)
 		b.AddSyncState(stateName, "Suggestions overview", stateName, labels)
@@ -99,4 +111,14 @@ func (b *Bot) RateLimitStatus() *github.Rate {
 		fmt.Println(err)
 	}
 	return rl.Core
+}
+
+func (b *Bot) GetIssue(id int) (*github.Issue, error) {
+	issue, _, err := b.gh.Issues.Get(context.Background(), b.conf.Owner, b.conf.Repository, id)
+	if err != nil {
+		b.log.Warnf("Could not get issue with ID=%d\n", id)
+		return nil, fmt.Errorf("could not get issue with id=%d\n", id)
+	}
+
+	return issue, nil
 }
