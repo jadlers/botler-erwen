@@ -103,12 +103,12 @@ func IssueIDFromURL(url string) int {
 	return id
 }
 
-func (b *Bot) FindIssueProjectCard(issueID int) (*github.ProjectCard, error) {
+func (b *Bot) FindIssueProjectCard(issueNumber int) (*github.ProjectCard, error) {
 	// First go through cache and see if we've cached the card.
-	b.log.Debugf("Looking for card for issue with id: %d\n", issueID)
+	b.log.Debugf("Looking for card for issue with id: %d\n", issueNumber)
 	for _, card := range b.cachedCards {
 		b.log.Debugf("Potential card: %s\n", card.GetColumnURL())
-		if IssueIDFromURL(*card.ContentURL) == issueID {
+		if IssueNumberFromURL(*card.ContentURL) == issueNumber {
 			return card, nil
 		}
 	}
@@ -120,7 +120,7 @@ func (b *Bot) FindIssueProjectCard(issueID int) (*github.ProjectCard, error) {
 		cards, _ := b.getProjectCards(column)
 		for _, card := range cards {
 			b.log.Debugf("Currently checking %s\n", card.GetContentURL())
-			if b.IssueIDFromURL(card.GetContentURL()) == issueID {
+			if b.IssueIDFromURL(card.GetContentURL()) == issueNumber {
 				return card, nil
 			}
 		}
@@ -128,5 +128,5 @@ func (b *Bot) FindIssueProjectCard(issueID int) (*github.ProjectCard, error) {
 
 	// Otherwise we'll need to go throgh all project columns
 
-	return nil, fmt.Errorf("no card found for issue with ID='%d'\n", issueID)
+	return nil, fmt.Errorf("no card found for issue with ID='%d'\n", issueNumber)
 }

@@ -49,11 +49,11 @@ func main() {
 				labels = append(labels, label.GetName())
 			}
 
-			issueID := erwen.IssueIDFromURL(event.Issue.GetURL())
+			issueNumber := event.Issue.GetNumber()
 			eventLog := log.WithFields(logrus.Fields{
-				"action":  event.GetAction(),
-				"issueID": issueID,
-				"labels":  labels,
+				"action":   event.GetAction(),
+				"issueNum": issueNumber,
+				"labels":   labels,
 			})
 			eventLog.Infoln("New issue event")
 
@@ -85,7 +85,7 @@ func main() {
 			}
 
 			// If not: Find it and move it or create it.
-			if card, err := erwen.FindIssueProjectCard(issueID); err == nil {
+			if card, err := erwen.FindIssueProjectCard(issueNumber); err == nil {
 				if err := erwen.MoveCard(matchedState, card.GetID()); err != nil {
 					eventLog.Errorf("Error moving card", err)
 				} else {
@@ -93,7 +93,7 @@ func main() {
 				}
 			} else {
 				// Create the card
-				ghIssue, _ := erwen.GetIssue(issueID)
+				ghIssue, _ := erwen.GetIssue(issueNumber)
 				if _, err := erwen.CreateCard(matchedState, ghIssue); err != nil {
 					eventLog.Warnf("Error creating card", err)
 				} else {
