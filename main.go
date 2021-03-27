@@ -110,7 +110,50 @@ func main() {
 			projectCard := event
 			eventLog := log.WithField("action", projectCard.GetAction())
 			eventLog.Infoln("New ProjectCardEvent")
-			eventLog.Errorln("NOT IMPLEMENTED")
+
+			column, err := erwen.GetCardColumn(event.ProjectCard)
+			if err != nil {
+				eventLog.Errorln(err)
+				return
+			}
+
+			columnName := column.GetName()
+			eventLog.Debugf("Looking for column name '%s'\n", columnName)
+
+			// Get the SyncState based on the column
+			var newState *bot.SyncState
+			for _, ss := range erwen.SyncStates {
+				if columnName == ss.Name {
+					newState = ss
+					break
+				}
+			}
+
+			if newState == nil {
+				eventLog.Infoln("Project card not in a synced column")
+				return
+			}
+
+			// Check if the required state labels are set
+			issueNumber := bot.IssueNumberFromURL(event.ProjectCard.GetContentURL())
+			issue, err := erwen.GetIssue(issueNumber)
+			if err != nil {
+				eventLog.Errorf("Could not find issue for Project Card with content URL: %s\n", event.ProjectCard.GetColumnURL())
+				return
+			}
+
+			labels, changed := erwen.GetCorrectLabels(newState, issue)
+			if !changed {
+				eventLog.Infoln("Project card already has correct labels")
+				return
+			}
+
+			// 3. If not set them
+			if err := erwen.SetIssueLabels(issue, labels); err != nil {
+				eventLog.Errorf("Failed to set labels on issue: %v\n", err)
+			}
+
+			eventLog.Infoln("Labels for issue updated")
 
 		default:
 			log.WithField("eventType", github.WebHookType(r)).Debugln("New unhandled event")

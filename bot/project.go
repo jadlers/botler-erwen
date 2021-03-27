@@ -97,7 +97,17 @@ func (b *Bot) getProjectCards(column *github.ProjectColumn) ([]*github.ProjectCa
 	return cards, nil
 }
 
-func IssueIDFromURL(url string) int {
+// GetGardColumn takes a project card and finds the column it's in
+func (b *Bot) GetCardColumn(card *github.ProjectCard) (*github.ProjectColumn, error) {
+	if card.ColumnID == nil {
+		return nil, fmt.Errorf("No columnID given on *github.ProjectCard")
+	}
+
+	column, _, err := b.gh.Projects.GetProjectColumn(context.Background(), card.GetColumnID())
+	return column, err
+}
+
+func IssueNumberFromURL(url string) int {
 	parts := strings.Split(url, "/")
 	id, _ := strconv.Atoi(parts[len(parts)-1])
 	return id
