@@ -93,7 +93,11 @@ func main() {
 				}
 			} else {
 				// Create the card
-				ghIssue, _ := erwen.GetIssue(issueNumber)
+				ghIssue, err := erwen.GetIssue(issueNumber)
+				if err != nil {
+					eventLog.Errorln(err)
+					return
+				}
 				if _, err := erwen.CreateCard(matchedState, ghIssue); err != nil {
 					eventLog.Warnf("Error creating card", err)
 				} else {

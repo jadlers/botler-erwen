@@ -114,7 +114,6 @@ func (b *Bot) RateLimitStatus() *github.Rate {
 func (b *Bot) GetIssue(id int) (*github.Issue, error) {
 	issue, _, err := b.gh.Issues.Get(context.Background(), b.conf.Owner, b.conf.Repository, id)
 	if err != nil {
-		b.log.Warnf("Could not get issue with ID=%d\n", id)
 		return nil, fmt.Errorf("could not get issue with id=%d\n", id)
 	}
 
